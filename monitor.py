@@ -1,8 +1,8 @@
 import requests
-from bs4 import BeautifulSoup
 import os
 import re
 import json
+from bs4 import BeautifulSoup
 
 SEARCH_URL = "https://auctions.yahoo.co.jp/search/search?aq=-1&auccat=&ei=utf-8&fr=auc_top&oq=&p=%E3%83%AB%E3%83%8D%E3%82%B5%E3%83%B3%E3%82%B9%20%E6%A0%AA%E4%B8%BB%E5%84%AA%E5%BE%85&sc_i=&tab_ex=commerce"
 
@@ -10,9 +10,11 @@ headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
-# =========================
-# 検索ページ取得
-# =========================
+webhook = os.environ["DISCORD_WEBHOOK"]
+
+# =========================================================
+# ■ 検索ページ取得
+# =========================================================
 response = requests.get(
     SEARCH_URL,
     headers=headers,
@@ -24,39 +26,35 @@ print("status:", response.status_code)
 html = response.text
 
 print("pageData =>", "pageData" in html)
-print("__NEXT_DATA__ =>", "__NEXT_DATA__" in html)
 print("productName =>", "productName" in html)
 
-# =========================
-# ★ここから追加
-# =========================
-
+# =========================================================
+# ■ pageData（検索ページ）抽出：将来用（今は保険）
+# =========================================================
 match = re.search(
-    r'__NEXT_DATA__" type="application/json">(.*?)</script>',
-    response.text,
+    r'var pageData = (.*?);</script>',
+    html,
     re.DOTALL
 )
 
 if match:
-    data = json.loads(match.group(1))
-
-    print("NEXT_DATA FOUND")
-    print(type(data))
-
-    # 中身構造確認（重要）
-    print(data.keys())
+    try:
+        search_data = json.loads(match.group(1))
+        print("SEARCH pageData FOUND")
+        print(search_data.keys())
+    except Exception as e:
+        print("search pageData parse error:", e)
 else:
-    print("NEXT_DATA NOT FOUND")
+    print("search pageData NOT FOUND")
 
-# =========================
-# とりあえず従来のHTML抽出（暫定）
-# =========================
+# =========================================================
+# ■ 暫定：HTML抽出（今は補助）
+# =========================================================
 soup = BeautifulSoup(html, "lxml")
 
 items = []
 
 for a in soup.find_all("a", href=True):
-
     href = a["href"]
     text = a.get_text(strip=True)
 
@@ -71,16 +69,9 @@ for a in soup.find_all("a", href=True):
 
 print("item count:", len(items))
 
-for item in items[:5]:
-    print()
-    print("TITLE:", item["title"])
-    print("URL:", item["url"])
-
-# =========================
-# Discord通知（検索結果）
-# =========================
-webhook = os.environ["DISCORD_WEBHOOK"]
-
+# =========================================================
+# ■ Discord（検索結果通知）
+# =========================================================
 message = "Yahoo取得成功（検索）\n\n"
 
 for item in items[:3]:
@@ -95,16 +86,13 @@ requests.post(
     timeout=30
 )
 
-# =========================
-# デバッグ保存
-# =========================
-with open("debug.html", "w", encoding="utf-8") as f:
+with open("debug_search.html", "w", encoding="utf-8") as f:
     f.write(html)
 
-print("html saved")
+print("search html saved")
 
 # =========================================================
-# ★ 商品ページ取得テスト（ここからが重要）
+# ■ 商品ページテスト
 # =========================================================
 
 auction_url = "https://auctions.yahoo.co.jp/jp/auction/s1231564200"
@@ -119,9 +107,9 @@ print("auction status:", auction_response.status_code)
 
 auction_html = auction_response.text
 
-# =========================
-# pageData 抽出（本命）
-# =========================
+# =========================================================
+# ■ pageData（商品）抽出（本命）
+# =========================================================
 match = re.search(
     r"var pageData = (.*?);</script>",
     auction_html,
@@ -139,9 +127,9 @@ if match:
         print("BIDS:", item.get("bids"))
         print("ENDTIME:", item.get("endtime"))
 
-        # =========================
-        # Discord通知（商品）
-        # =========================
+        # =====================================================
+        # ■ Discord（商品通知）
+        # =====================================================
         message = (
             "Yahooオークション監視（商品）\n\n"
             f"タイトル: {item.get('productName')}\n"
