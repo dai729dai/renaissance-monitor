@@ -27,7 +27,7 @@ html = response.text
 print("pageData =>", "pageData" in html)
 
 # =========================================================
-# ■ 検索 pageData 抽出（ここが本命）
+# ■ 検索 pageData 抽出
 # =========================================================
 search_data = None
 
@@ -47,58 +47,35 @@ else:
     print("search pageData NOT FOUND")
 
 # =========================================================
-# ■ 商品URLリスト抽出（将来ここを強化）
+# ■ 商品URL抽出（JSONのみ）
 # =========================================================
 items = []
 
 if search_data:
 
-    # ★ここが重要ポイント（構造差を吸収）
-    raw_items = search_data.get("items") or search_data.get("search") or search_data
+    raw_items = search_data.get("items")
 
-    # dict or listの揺れ対策
     if isinstance(raw_items, dict):
-        raw_items = raw_items.get("items") or raw_items.get("list") or []
+        raw_items = raw_items.get("items") or raw_items.get("list")
 
     if isinstance(raw_items, list):
         for it in raw_items:
-            try:
-                title = it.get("title") or it.get("productName")
-                url = it.get("url") or it.get("itemUrl") or it.get("auctionUrl")
+            if not isinstance(it, dict):
+                continue
 
-                if title and url:
-                    items.append({
-                        "title": title,
-                        "url": url
-                    })
-            except:
-                pass
+            title = it.get("title") or it.get("productName")
+            url = it.get("url") or it.get("itemUrl") or it.get("auctionUrl")
+
+            if title and url:
+                items.append({
+                    "title": title,
+                    "url": url
+                })
 
 print("item count:", len(items))
 
 # =========================================================
-# ■ フォールバック（HTML抽出：保険）
-# =========================================================
-if len(items) == 0:
-
-    print("fallback to HTML scraping")
-
-    soup = BeautifulSoup(html, "lxml")
-
-    for a in soup.find_all("a", href=True):
-        href = a["href"]
-        text = a.get_text(strip=True)
-
-        if "auction" in href and len(text) > 10:
-            items.append({
-                "title": text,
-                "url": href
-            })
-
-print("final item count:", len(items))
-
-# =========================================================
-# ■ Discord（検索結果通知）
+# ■ Discord（検索結果）
 # =========================================================
 message = "Yahoo取得成功（検索）\n\n"
 
@@ -112,7 +89,7 @@ requests.post(
 )
 
 # =========================================================
-# ■ 商品ページテスト（pageData確定版）
+# ■ 商品ページテスト
 # =========================================================
 
 auction_url = "https://auctions.yahoo.co.jp/jp/auction/s1231564200"
@@ -127,6 +104,9 @@ print("auction status:", auction_response.status_code)
 
 auction_html = auction_response.text
 
+# =========================================================
+# ■ 商品 pageData 抽出
+# =========================================================
 match = re.search(
     r"var pageData = (.*?);</script>",
     auction_html,
