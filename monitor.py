@@ -51,10 +51,19 @@ for title in titles[:10]:
 
 webhook = os.environ["DISCORD_WEBHOOK"]
 
+message = "Yahoo取得成功\n\n"
+
+for item in items[:3]:
+
+    message += (
+        f"{item['title']}\n"
+        f"{item['url']}\n\n"
+    )
+
 requests.post(
     webhook,
     json={
-        "content": f"Yahoo取得成功\n件数: {len(titles)}"
+        "content": message[:1800]
     },
     timeout=30
 )
