@@ -2,7 +2,6 @@ import requests
 import os
 import re
 import json
-from bs4 import BeautifulSoup
 
 SEARCH_URL = "https://auctions.yahoo.co.jp/search/search?aq=-1&auccat=&ei=utf-8&fr=auc_top&oq=&p=%E3%83%AB%E3%83%8D%E3%82%B5%E3%83%B3%E3%82%B9%20%E6%A0%AA%E4%B8%BB%E5%84%AA%E5%BE%85&sc_i=&tab_ex=commerce"
 
@@ -26,11 +25,12 @@ print("status:", response.status_code)
 html = response.text
 
 print("pageData =>", "pageData" in html)
-print("productName =>", "productName" in html)
 
 # =========================================================
-# ■ pageData（検索ページ）抽出：将来用（今は保険）
+# ■ 検索 pageData 抽出（ここが本命）
 # =========================================================
+search_data = None
+
 match = re.search(
     r'var pageData = (.*?);</script>',
     html,
@@ -41,44 +41,69 @@ if match:
     try:
         search_data = json.loads(match.group(1))
         print("SEARCH pageData FOUND")
-        print(search_data.keys())
     except Exception as e:
         print("search pageData parse error:", e)
 else:
     print("search pageData NOT FOUND")
 
 # =========================================================
-# ■ 暫定：HTML抽出（今は補助）
+# ■ 商品URLリスト抽出（将来ここを強化）
 # =========================================================
-soup = BeautifulSoup(html, "lxml")
-
 items = []
 
-for a in soup.find_all("a", href=True):
-    href = a["href"]
-    text = a.get_text(strip=True)
+if search_data:
 
-    if (
-        "auction" in href.lower()
-        and len(text) > 10
-    ):
-        items.append({
-            "title": text,
-            "url": href
-        })
+    # ★ここが重要ポイント（構造差を吸収）
+    raw_items = search_data.get("items") or search_data.get("search") or search_data
+
+    # dict or listの揺れ対策
+    if isinstance(raw_items, dict):
+        raw_items = raw_items.get("items") or raw_items.get("list") or []
+
+    if isinstance(raw_items, list):
+        for it in raw_items:
+            try:
+                title = it.get("title") or it.get("productName")
+                url = it.get("url") or it.get("itemUrl") or it.get("auctionUrl")
+
+                if title and url:
+                    items.append({
+                        "title": title,
+                        "url": url
+                    })
+            except:
+                pass
 
 print("item count:", len(items))
+
+# =========================================================
+# ■ フォールバック（HTML抽出：保険）
+# =========================================================
+if len(items) == 0:
+
+    print("fallback to HTML scraping")
+
+    soup = BeautifulSoup(html, "lxml")
+
+    for a in soup.find_all("a", href=True):
+        href = a["href"]
+        text = a.get_text(strip=True)
+
+        if "auction" in href and len(text) > 10:
+            items.append({
+                "title": text,
+                "url": href
+            })
+
+print("final item count:", len(items))
 
 # =========================================================
 # ■ Discord（検索結果通知）
 # =========================================================
 message = "Yahoo取得成功（検索）\n\n"
 
-for item in items[:3]:
-    message += (
-        f"{item['title']}\n"
-        f"{item['url']}\n\n"
-    )
+for item in items[:5]:
+    message += f"{item['title']}\n{item['url']}\n\n"
 
 requests.post(
     webhook,
@@ -86,13 +111,8 @@ requests.post(
     timeout=30
 )
 
-with open("debug_search.html", "w", encoding="utf-8") as f:
-    f.write(html)
-
-print("search html saved")
-
 # =========================================================
-# ■ 商品ページテスト
+# ■ 商品ページテスト（pageData確定版）
 # =========================================================
 
 auction_url = "https://auctions.yahoo.co.jp/jp/auction/s1231564200"
@@ -107,9 +127,6 @@ print("auction status:", auction_response.status_code)
 
 auction_html = auction_response.text
 
-# =========================================================
-# ■ pageData（商品）抽出（本命）
-# =========================================================
 match = re.search(
     r"var pageData = (.*?);</script>",
     auction_html,
@@ -127,9 +144,6 @@ if match:
         print("BIDS:", item.get("bids"))
         print("ENDTIME:", item.get("endtime"))
 
-        # =====================================================
-        # ■ Discord（商品通知）
-        # =====================================================
         message = (
             "Yahooオークション監視（商品）\n\n"
             f"タイトル: {item.get('productName')}\n"
