@@ -24,58 +24,23 @@ print("status:", response.status_code)
 
 html = response.text
 
-print("pageData =>", "pageData" in html)
-
 # =========================================================
-# ■ 検索 pageData 抽出
-# =========================================================
-search_data = None
-
-match = re.search(
-    r'var pageData = (.*?);</script>',
-    html,
-    re.DOTALL
-)
-
-if match:
-    try:
-        search_data = json.loads(match.group(1))
-        print("SEARCH pageData FOUND")
-
-        # ★ここに追加
-        print("=== SEARCH DATA STRUCTURE ===")
-        print(json.dumps(search_data, indent=2, ensure_ascii=False)[:5000])
-    
-    except Exception as e:
-        print("search pageData parse error:", e)
-else:
-    print("search pageData NOT FOUND")
-
-# =========================================================
-# ■ 商品URL抽出（JSONのみ）
+# ■ URL抽出（ここが本体・pageDataは使わない）
 # =========================================================
 items = []
 
-if search_data:
+auction_urls = re.findall(
+    r'https://auctions\.yahoo\.co\.jp/jp/auction/[a-zA-Z0-9]+',
+    html
+)
 
-    raw_items = search_data.get("items")
+auction_urls = list(dict.fromkeys(auction_urls))  # 重複削除
 
-    if isinstance(raw_items, dict):
-        raw_items = raw_items.get("items") or raw_items.get("list")
-
-    if isinstance(raw_items, list):
-        for it in raw_items:
-            if not isinstance(it, dict):
-                continue
-
-            title = it.get("title") or it.get("productName")
-            url = it.get("url") or it.get("itemUrl") or it.get("auctionUrl")
-
-            if title and url:
-                items.append({
-                    "title": title,
-                    "url": url
-                })
+for url in auction_urls:
+    items.append({
+        "url": url,
+        "title": "auction item"
+    })
 
 print("item count:", len(items))
 
@@ -85,7 +50,7 @@ print("item count:", len(items))
 message = "Yahoo取得成功（検索）\n\n"
 
 for item in items[:5]:
-    message += f"{item['title']}\n{item['url']}\n\n"
+    message += f"{item['url']}\n\n"
 
 requests.post(
     webhook,
@@ -94,10 +59,13 @@ requests.post(
 )
 
 # =========================================================
-# ■ 商品ページテスト
+# ■ 商品ページテスト（完成済みロジック）
 # =========================================================
 
-auction_url = "https://auctions.yahoo.co.jp/jp/auction/s1231564200"
+if len(items) > 0:
+    auction_url = items[0]["url"]
+else:
+    auction_url = "https://auctions.yahoo.co.jp/jp/auction/s1231564200"
 
 auction_response = requests.get(
     auction_url,
@@ -110,7 +78,7 @@ print("auction status:", auction_response.status_code)
 auction_html = auction_response.text
 
 # =========================================================
-# ■ 商品 pageData 抽出
+# ■ 商品 pageData 抽出（ここは完成済みロジック維持）
 # =========================================================
 match = re.search(
     r"var pageData = (.*?);</script>",
