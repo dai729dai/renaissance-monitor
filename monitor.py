@@ -18,8 +18,6 @@ print("status:", response.status_code)
 
 soup = BeautifulSoup(response.text, "lxml")
 
-titles = []
-
 items = []
 
 for a in soup.find_all("a", href=True):
@@ -31,7 +29,6 @@ for a in soup.find_all("a", href=True):
         "auction" in href.lower()
         and len(text) > 10
     ):
-
         items.append({
             "title": text,
             "url": href
@@ -40,13 +37,10 @@ for a in soup.find_all("a", href=True):
 print("item count:", len(items))
 
 for item in items[:10]:
+
     print()
     print("TITLE:", item["title"])
     print("URL:", item["url"])
-    text = a.get_text(strip=True)
-
-    if len(text) > 20:
-        titles.append(text)
 
 titles = list(dict.fromkeys(titles))
 
