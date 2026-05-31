@@ -43,7 +43,8 @@ if match:
         print("SEARCH pageData FOUND")
 
         # ★ここに追加
-        print(json.dumps(search_data, indent=2, ensure_ascii=False)[:3000])
+        print("=== SEARCH DATA STRUCTURE ===")
+        print(json.dumps(search_data, indent=2, ensure_ascii=False)[:5000])
     
     except Exception as e:
         print("search pageData parse error:", e)
