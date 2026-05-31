@@ -60,3 +60,8 @@ requests.post(
     },
     timeout=30
 )
+
+with open("debug.html", "w", encoding="utf-8") as f:
+    f.write(response.text)
+
+print("html saved")
