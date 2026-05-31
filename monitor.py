@@ -16,7 +16,9 @@ response = requests.get(
 
 print("status:", response.status_code)
 
-print(response.text[:10000])
+print("pageData" in response.text)
+print("__NEXT_DATA__" in response.text)
+print("productName" in response.text)
 
 soup = BeautifulSoup(response.text, "lxml")
 
