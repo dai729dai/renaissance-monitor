@@ -22,12 +22,11 @@ def extract_quantity(text):
     return None
 
 
-def is_within_5_hours(endtime_str):
+def parse_endtime(endtime_str):
     try:
-        end_dt = datetime.strptime(endtime_str, "%Y-%m-%d %H:%M:%S")
-        return end_dt <= datetime.now() + timedelta(hours=5)
+        return datetime.strptime(endtime_str, "%Y-%m-%d %H:%M:%S")
     except:
-        return False
+        return None
 
 
 # =========================================================
@@ -44,7 +43,7 @@ print("status:", response.status_code)
 html = response.text
 
 # =========================================================
-# ■ URL抽出（安定版）
+# ■ URL抽出
 # =========================================================
 auction_urls = re.findall(
     r'https://auctions\.yahoo\.co\.jp/jp/auction/[a-zA-Z0-9]+',
@@ -60,7 +59,7 @@ print("found urls:", len(auction_urls))
 # =========================================================
 valid_items = []
 
-for url in auction_urls[:10]:  # 負荷制御
+for url in auction_urls[:10]:
 
     try:
         r = requests.get(url, headers=headers, timeout=20)
@@ -80,41 +79,59 @@ for url in auction_urls[:10]:  # 負荷制御
 
         title = item.get("productName", "")
         price = int(item.get("price", 0))
-        endtime = item.get("endtime", "")
+        endtime_str = item.get("endtime", "")
 
         quantity = extract_quantity(title)
 
-        # =====================================================
-        # ■ フィルタ条件
-        # =====================================================
+        print("DEBUG:", title, price, quantity)
 
-        # 枚数が取れないものはスキップ（精度優先）
+        # =====================================================
+        # ■ 基本チェック
+        # =====================================================
         if quantity is None:
             continue
 
-        # 単価計算（重要）
         unit_price = price / quantity
 
-        print("DEBUG:", title, price, quantity, unit_price)
-
-        # 条件1：単価1500円以下
-        if unit_price > 1500:
+        # =====================================================
+        # ■ 条件①：単価1000円以下（変更済）
+        # =====================================================
+        if unit_price > 1000:
             continue
 
-        # 条件2：10枚以下
+        # =====================================================
+        # ■ 条件②：10枚以下
+        # =====================================================
         if quantity > 10:
             continue
 
-        # 条件3：終了5時間以内
-        if not is_within_5_hours(endtime):
+        # =====================================================
+        # ■ 条件③：残り5時間以内（重要修正）
+        # =====================================================
+        end_dt = parse_endtime(endtime_str)
+
+        if end_dt is None:
             continue
 
+        now = datetime.now()
+        remaining = end_dt - now
+
+        if remaining.total_seconds() > 5 * 3600:
+            continue
+
+        if remaining.total_seconds() < 0:
+            continue
+
+        # =====================================================
+        # ■ 合格
+        # =====================================================
         valid_items.append({
             "title": title,
             "price": price,
             "quantity": quantity,
             "unit_price": unit_price,
-            "endtime": endtime,
+            "endtime": endtime_str,
+            "remaining_min": int(remaining.total_seconds() / 60),
             "url": url
         })
 
@@ -136,7 +153,7 @@ if valid_items:
             f"総額: {item['price']}円\n"
             f"枚数: {item['quantity']}\n"
             f"単価: {item['unit_price']:.0f}円/枚\n"
-            f"終了: {item['endtime']}\n"
+            f"残り: {item['remaining_min']}分\n"
             f"{item['url']}\n\n"
         )
 
