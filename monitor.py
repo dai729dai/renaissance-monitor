@@ -67,3 +67,19 @@ with open("debug.html", "w", encoding="utf-8") as f:
     f.write(response.text)
 
 print("html saved")
+
+# =========================
+# 商品ページ取得テスト
+# =========================
+
+auction_url = "https://auctions.yahoo.co.jp/jp/auction/s1231564200"
+
+auction_response = requests.get(
+    auction_url,
+    headers=headers,
+    timeout=30
+)
+
+print("auction status:", auction_response.status_code)
+
+print(auction_response.text[:5000])
