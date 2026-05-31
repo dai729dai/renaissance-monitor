@@ -16,6 +16,8 @@ response = requests.get(
 
 print("status:", response.status_code)
 
+print(response.text[:10000])
+
 soup = BeautifulSoup(response.text, "lxml")
 
 items = []
