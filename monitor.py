@@ -20,7 +20,29 @@ soup = BeautifulSoup(response.text, "lxml")
 
 titles = []
 
-for a in soup.find_all("a"):
+items = []
+
+for a in soup.find_all("a", href=True):
+
+    href = a["href"]
+    text = a.get_text(strip=True)
+
+    if (
+        "auction" in href.lower()
+        and len(text) > 10
+    ):
+
+        items.append({
+            "title": text,
+            "url": href
+        })
+
+print("item count:", len(items))
+
+for item in items[:10]:
+    print()
+    print("TITLE:", item["title"])
+    print("URL:", item["url"])
     text = a.get_text(strip=True)
 
     if len(text) > 20:
