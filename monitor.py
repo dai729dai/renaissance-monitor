@@ -42,13 +42,6 @@ for item in items[:10]:
     print("TITLE:", item["title"])
     print("URL:", item["url"])
 
-titles = list(dict.fromkeys(titles))
-
-print("title count:", len(titles))
-
-for title in titles[:10]:
-    print(title)
-
 webhook = os.environ["DISCORD_WEBHOOK"]
 
 message = "Yahoo取得成功\n\n"
