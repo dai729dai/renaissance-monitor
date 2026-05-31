@@ -28,6 +28,27 @@ print("__NEXT_DATA__ =>", "__NEXT_DATA__" in html)
 print("productName =>", "productName" in html)
 
 # =========================
+# ★ここから追加
+# =========================
+
+match = re.search(
+    r'__NEXT_DATA__" type="application/json">(.*?)</script>',
+    response.text,
+    re.DOTALL
+)
+
+if match:
+    data = json.loads(match.group(1))
+
+    print("NEXT_DATA FOUND")
+    print(type(data))
+
+    # 中身構造確認（重要）
+    print(data.keys())
+else:
+    print("NEXT_DATA NOT FOUND")
+
+# =========================
 # とりあえず従来のHTML抽出（暫定）
 # =========================
 soup = BeautifulSoup(html, "lxml")
