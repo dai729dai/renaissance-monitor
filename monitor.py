@@ -115,3 +115,14 @@ if valid_items:
 
 else:
     print("NO MATCH → relax conditions or debug filters")
+
+print("TEST WEBHOOK")
+
+r = requests.post(
+    webhook,
+    json={"content": "Webhookテスト"},
+    timeout=30
+)
+
+print("WEBHOOK STATUS:", r.status_code)
+print("WEBHOOK RESPONSE:", r.text)
