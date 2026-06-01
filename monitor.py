@@ -126,7 +126,7 @@ for url in auction_urls[:10]:
             remaining.total_seconds() / 3600
         )
 
-        if remaining.total_seconds() > 5 * 3600:
+        if remaining.total_seconds() > 24 * 3600:
             print("SKIP: more than 5 hours remaining")
             continue
 
