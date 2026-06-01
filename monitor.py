@@ -62,56 +62,92 @@ for url in auction_urls[:10]:
         r = requests.get(url, headers=headers, timeout=20)
         html = r.text
 
-        match = re.search(r"var pageData = (.*?);</script>", html, re.DOTALL)
+        match = re.search(
+            r"var pageData = (.*?);</script>",
+            html,
+            re.DOTALL
+        )
+
         if not match:
             continue
 
         data = json.loads(match.group(1))
         item = data["items"]
 
-        title = item.get("productName","")
-        price = int(item.get("price",0))
-        endtime = item.get("endtime","")
+        title = item.get("productName", "")
+        price = int(item.get("price", 0))
+        endtime = item.get("endtime", "")
 
         qty = extract_quantity(title)
 
+        if qty is None or qty == 0:
+            print("SKIP: quantity not found", title)
+            continue
+
         unit = price / qty
 
-        print("DEBUG:", title, price, qty, unit)
+        print(
+            "DEBUG:",
+            title,
+            price,
+            qty,
+            unit
+        )
 
-        # ★ 条件（まずはゆるく）
+        # -------------------------
+        # 単価フィルタ
+        # -------------------------
         if unit > 1500:
+            print("SKIP: unit price")
             continue
 
+        # -------------------------
+        # 枚数フィルタ
+        # -------------------------
         if qty > 10:
+            print("SKIP: quantity > 10")
             continue
 
+        # -------------------------
+        # 時間フィルタ
+        # -------------------------
         end_dt = parse_endtime(endtime)
 
-print("ENDTIME:", endtime)
+        print("ENDTIME:", endtime)
 
-if end_dt:
+        if not end_dt:
+            print("SKIP: endtime parse failed")
+            continue
 
-    remaining = end_dt - datetime.now()
+        remaining = end_dt - datetime.now()
 
-    print(
-        "REMAINING HOURS:",
-        remaining.total_seconds() / 3600
-    )
+        print(
+            "REMAINING HOURS:",
+            remaining.total_seconds() / 3600
+        )
 
-    if remaining.total_seconds() > 5 * 3600:
-        print("SKIP: more than 5 hours remaining")
-        continue
+        if remaining.total_seconds() > 5 * 3600:
+            print("SKIP: more than 5 hours remaining")
+            continue
 
-    if remaining.total_seconds() < 0:
-        print("SKIP: already ended")
-        continue
-        
-        valid_items.append((title, price, qty, unit, url))
+        if remaining.total_seconds() < 0:
+            print("SKIP: already ended")
+            continue
+
+        print("PASS FILTER")
+
+        valid_items.append(
+            (
+                title,
+                price,
+                qty,
+                unit,
+                url
+            )
+        )
 
     except Exception as e:
-        print("error:", e)
-
+        print("ERROR:", e)
 
 # -------------------------
 # Discord
