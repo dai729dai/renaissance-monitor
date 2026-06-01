@@ -2,7 +2,7 @@ name: Auction Monitor
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # 30分ごと
+    - cron: '0 */6 * * *'   # 6時間ごと
 
   workflow_dispatch:
 
