@@ -87,12 +87,26 @@ for url in auction_urls[:10]:
             continue
 
         end_dt = parse_endtime(endtime)
-        if end_dt:
-            remaining = end_dt - datetime.now()
 
-            if remaining.total_seconds() > 5*3600:
-                continue
+print("ENDTIME:", endtime)
 
+if end_dt:
+
+    remaining = end_dt - datetime.now()
+
+    print(
+        "REMAINING HOURS:",
+        remaining.total_seconds() / 3600
+    )
+
+    if remaining.total_seconds() > 5 * 3600:
+        print("SKIP: more than 5 hours remaining")
+        continue
+
+    if remaining.total_seconds() < 0:
+        print("SKIP: already ended")
+        continue
+        
         valid_items.append((title, price, qty, unit, url))
 
     except Exception as e:
